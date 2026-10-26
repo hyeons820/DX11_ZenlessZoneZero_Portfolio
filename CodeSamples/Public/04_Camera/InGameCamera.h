@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Client_Defines.h"
 #include "Camera.h"
 
@@ -36,6 +36,7 @@ public:
 	void	Request_Follow(class CCharacter* pTarget);
 	void	Request_LockOn(CTransform* pPlayer, CTransform* pEnemy);
 	void	Request_Ultimate(CTransform* pActor);
+	void	Request_Opening(CTransform* pActor);
 
 public:
 	virtual HRESULT			Initialize_Prototype() override;
@@ -72,13 +73,14 @@ private:
 	_float    m_fScriptDuration = {};
 
 	class CCameraAnimClip* m_pUltCamClip = { nullptr };
+	class CCameraAnimClip* m_pQuestClip = { nullptr };
 
 private:
 	void	Update_Follow(_float fTimeDelta);
 	void	Update_Input(_float fTimeDelta);
 
-	void	Update_Ultimate(_float fTimeDelta);
-	void	End_Ultimate();
+	void	Update_Camera(class CCameraAnimClip* pCamClip, _float fTimeDelta);
+	void	End_CamClip();
 
 public:
 	static	CInGameCamera* Create(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);

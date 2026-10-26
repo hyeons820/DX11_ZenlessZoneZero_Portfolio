@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 #include "Base.h"
 #include "Client_Defines.h"
 #include "Collision_Manager.h"
 
 NS_BEGIN(Client)
 
+class CMonster;
 struct HITBOX_ACTIVE_DESC;
 
 class CCombatSystem_Manager final : public CBase
@@ -49,9 +50,15 @@ private:
     void        Resolve_JustEvadeCollision(const CCollision_Manager::COLLISION_RESULT& Result);
     void        Resolve_ParryCollision(const CCollision_Manager::COLLISION_RESULT& Result);
     void        Resolve_ParryImpactCollision(const CCollision_Manager::COLLISION_RESULT& Result);
-    void        Apply_Damage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc);
+    void        Apply_Damage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex);
     void        Add_DefendedHitBox(_udlong dlAttackerID, _uint iAttackID, _uint iHitBoxID);
     void        Clear_DefendedHitBoxes(_udlong dlAttackerID, _uint iAttackID);
+    _float      Get_HitDamageRatePercent(const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex) const;
+
+private:
+    _float      Calculate_PlayerDamage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex) const;
+    _float      Calculate_MonsterDamage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex) const;
+    _float      Calculate_MonsterDefenseCoeff(CMonster* pMonster) const;
 
 private:
     vector<HIT_RECORD> m_HitRecords;

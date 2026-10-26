@@ -3,7 +3,7 @@
 // [중략] include·클래스/자료형 선언·초기화 및 관련 보조 구현은 전체 프로젝트에 있습니다.
 // 아래 함수 본문은 원본 그대로이며, 이 파일만으로 빌드하거나 실행할 수 없습니다.
 
-// 원본 1439~1481행: Handle_AttackInput
+// 원본 1755~1797행: Handle_AttackInput
 _bool CMiyabi::Handle_AttackInput()
 {
     const MAIN_STATE eMain = m_pStateCom->Get_MainState();
@@ -50,7 +50,7 @@ _bool CMiyabi::Handle_AttackInput()
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 1562~1598행: Update_AttackBuffer
+// 원본 1878~1914행: Update_AttackBuffer
 void CMiyabi::Update_AttackBuffer(_float fTimeDelta)
 {
     if (!m_bAttackBuffered)
@@ -91,7 +91,7 @@ void CMiyabi::Update_AttackBuffer(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 1672~1707행: Start_NormalAttack
+// 원본 1988~2076행: Start_NormalAttack
 _bool CMiyabi::Start_NormalAttack(ATTACK_SUBSTATE eAttackState)
 {
     CState::STATE_REQUEST Request = {};
@@ -110,28 +110,81 @@ _bool CMiyabi::Start_NormalAttack(ATTACK_SUBSTATE eAttackState)
 
     Setup_AttackRootTarget(false);
 
-    if (eAttackState == ATTACK_SUBSTATE::COMBO4)
-    {
-        m_eCameraFocusMode = CAMERA_FOCUS_MODE::LERP;
-
-        _vector vPos = m_pTransformCom->Get_State(STATE::POSITION);
-        _float fDistance = Compute_NonPierceFocusDistance(vAttackDir, 2.5f);
-        Begin_AttackCameraFocus(vPos, vAttackDir, fDistance, 0.55f, 4.5f);
-    }
-    else
-    {
-        m_eCameraFocusMode = CAMERA_FOCUS_MODE::DEFAULT;
-    }
-
     if (!m_pStateCom->Request_State(Request))
         return false;
+
+    m_eCameraFocusMode = CAMERA_FOCUS_MODE::DEFAULT;
+
+    EVENT_PLAY_EFFECT Event{};
+    XMStoreFloat3(&Event.vPosition, m_pTransformCom->Get_State(STATE::POSITION));
+    XMStoreFloat3(&Event.vDirection, XMVector3Normalize(m_pTransformCom->Get_State(STATE::LOOK)));
+    Event.pFollowTransform = m_pTransformCom;
+
+    switch (eAttackState)
+    {
+    case ATTACK_SUBSTATE::COMBO1:
+        Event.eEffectID = EFFECT_ID::PLAYER_NORMAL1_FX;
+        break;
+
+    case ATTACK_SUBSTATE::COMBO2:
+        Event.eEffectID = EFFECT_ID::PLAYER_NORMAL2_FX;
+        break;
+
+    case ATTACK_SUBSTATE::COMBO3:
+        Event.eEffectID = EFFECT_ID::PLAYER_NORMAL3_FX;
+        break;
+
+    case ATTACK_SUBSTATE::COMBO4:
+        Event.eEffectID = EFFECT_ID::PLAYER_NORMAL4_FX;
+        Event.pFollowTransform = nullptr;
+        break;
+
+    case ATTACK_SUBSTATE::COMBO5:
+        Event.eEffectID = EFFECT_ID::PLAYER_NORMAL5_FX;
+        break;
+    }
+
+    if (Event.eEffectID != EFFECT_ID::END)
+        m_pGameInstance->Publish_Event<EVENT_PLAY_EFFECT>(Event);
+
+    const _uint iSoundID = ETOUI(Convert_AttackToAction(eAttackState));
+
+    if (m_iLastNormalAttackSoundID != iSoundID)
+    {
+        m_iLastNormalAttackSoundID = iSoundID;
+
+        Play_RandomNormalVoice();
+
+        switch (eAttackState)
+        {
+        case ATTACK_SUBSTATE::COMBO1:
+            m_pGameInstance->PlaySFX(L"Normal_Attack01_SFX", SOUND_CHANNEL::PLAYER, 0.8f);
+            break;
+
+        case ATTACK_SUBSTATE::COMBO2:
+            m_pGameInstance->PlaySFX(L"Normal_Attack02_SFX", SOUND_CHANNEL::PLAYER, 0.8f);
+            break;
+
+        case ATTACK_SUBSTATE::COMBO3:
+            m_pGameInstance->PlaySFX(L"Normal_Attack03_SFX", SOUND_CHANNEL::PLAYER, 0.8f);
+            break;
+
+        case ATTACK_SUBSTATE::COMBO4:
+            m_pGameInstance->PlaySFX(L"Normal_Attack04_SFX", SOUND_CHANNEL::PLAYER, 0.8f);
+            break;
+
+        case ATTACK_SUBSTATE::COMBO5:
+            m_pGameInstance->PlaySFX(L"Normal_Attack05_SFX", SOUND_CHANNEL::PLAYER, 0.8f);
+            break;
+        }
+    }
 
     return true;
 }
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 2654~2674행: Get_NextCombo
+// 원본 3071~3091행: Get_NextCombo
 ATTACK_SUBSTATE CMiyabi::Get_NextCombo(ATTACK_SUBSTATE eAttackState) const
 {
     switch (eAttackState)
@@ -156,7 +209,7 @@ ATTACK_SUBSTATE CMiyabi::Get_NextCombo(ATTACK_SUBSTATE eAttackState) const
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 2676~2698행: Convert_AttackToAction
+// 원본 3093~3115행: Convert_AttackToAction
 CMiyabi::MIYABI_ACTION CMiyabi::Convert_AttackToAction(ATTACK_SUBSTATE eAttackState) const
 {
     switch (eAttackState)

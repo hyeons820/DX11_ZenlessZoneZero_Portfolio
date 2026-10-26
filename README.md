@@ -1,4 +1,4 @@
-﻿# Zenless Zone Zero - DirectX 11 개인 프로젝트
+# Zenless Zone Zero - DirectX 11 개인 프로젝트
 
 > C++과 DirectX 11로 제작한 젠레스 존 제로 모작입니다. 맵 편집 도구, 캐릭터 조작과 애니메이션, 전투 판정, 카메라 연출과 툰 셰이딩을 구현했습니다.
 
@@ -12,18 +12,16 @@
 
 캐릭터의 조작과 애니메이션을 전투 판정에 연결하고, 제작 과정에서 사용할 편집 도구를 함께 구성한 3D 액션 프로젝트입니다. 이 문서는 최신 원본 프로젝트에서 확인한 구현을 소개합니다. 공개 코드 샘플은 핵심 구조를 발췌한 자료이며, 본문의 추가 구현 중 아직 샘플에 반영하지 않은 범위는 각 절에 표시했습니다.
 
-<!-- 초안: 개발 기간과 시연 영상 링크를 확인하고, 아래 하이라이트에 실제 GIF를 연결합니다. 이펙트 에디터 연동은 현재 구현 범위에 포함하지 않습니다. -->
-
 ## 하이라이트
 
 <table>
   <tr>
-    <td width="50%" align="center"><b>맵·내비게이션 편집 도구</b><br/><sub>오브젝트 배치·피킹·셀 제작 · GIF 추가 예정</sub></td>
-    <td width="50%" align="center"><b>캐릭터 조작과 콤보</b><br/><sub>애니메이션 전환·연속 공격 · GIF 추가 예정</sub></td>
+    <td width="50%" align="center"><b>캐릭터 등장 연출</b><br/><img src="docs/Images/Opening.gif" width="400" alt="캐릭터 등장 연출"/><br/><sub>등장 애니메이션과 카메라 연출</sub></td>
+    <td width="50%" align="center"><b>보스 전투</b><br/><img src="docs/Images/Boss_03.gif" width="400" alt="보스 전투"/><br/><sub>근접 전투와 타격별 데미지 표시</sub></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><b>패링과 저스트 회피</b><br/><sub>방어 판정·시간 배율 변화 · GIF 추가 예정</sub></td>
-    <td width="50%" align="center"><b>등장·궁극기 카메라</b><br/><sub>연출 카메라 재생·추적 복귀 · GIF 추가 예정</sub></td>
+    <td width="50%" align="center"><b>패링</b><br/><img src="docs/Images/Parry.gif" width="400" alt="패링"/><br/><sub>공격 타이밍에 맞춘 방어와 후속 동작</sub></td>
+    <td width="50%" align="center"><b>궁극기와 전투 복귀</b><br/><img src="docs/Images/Boss_04,Ultimate.gif" width="400" alt="궁극기와 전투 복귀"/><br/><sub>궁극기 사용과 전투 흐름</sub></td>
   </tr>
 </table>
 
@@ -44,6 +42,13 @@
 ## 주요 구현
 
 ### 1. 맵 편집과 내비게이션 제작
+
+<table>
+  <tr>
+    <td width="50%" align="center"><b>맵 오브젝트 편집</b><br/><img src="docs/Images/Editor.gif" width="400" alt="맵 오브젝트 편집"/><br/><sub>오브젝트 선택과 Transform 편집</sub></td>
+    <td width="50%" align="center"><b>내비게이션 셀 제작</b><br/><img src="docs/Images/Navi.gif" width="400" alt="내비게이션 셀 제작"/><br/><sub>삼각형 셀 생성과 연결</sub></td>
+  </tr>
+</table>
 
 오브젝트 배치와 속성 편집을 위한 도구를 구성했습니다. 편집 요청을 처리하는 `CEditor_Controller`와 엔진 오브젝트에 접근하는 `CEditor_Bridge`를 통해 배치·선택·저장 흐름을 연결합니다.
 
@@ -71,6 +76,18 @@
 
 ### 2. 캐릭터 조작과 애니메이션
 
+<details>
+<summary><b>보스 전투 시연 더 보기</b></summary>
+
+<table>
+  <tr>
+    <td width="50%" align="center"><b>보스 전투 시연 1</b><br/><img src="docs/Images/Boss_01.gif" width="400" alt="보스 전투 시연 1"/><br/><sub>보스 공격에 대응하는 이동과 전투</sub></td>
+    <td width="50%" align="center"><b>보스 전투 시연 2</b><br/><img src="docs/Images/Boss_02.gif" width="400" alt="보스 전투 시연 2"/><br/><sub>공격 패턴에 따른 거리 조절과 대응</sub></td>
+  </tr>
+</table>
+
+</details>
+
 캐릭터 상태와 애니메이션을 연결하고, 입력 시점과 실제 동작이 자연스럽게 이어지도록 블렌딩·루트 모션·공격 입력 버퍼를 적용했습니다.
 
 #### 애니메이션 블렌딩
@@ -89,7 +106,7 @@
 
 일반 공격 마지막 타격이 적중하면 차지 스택을 지급하고, 같은 공격에서 중복 지급되지 않도록 기록합니다. 차지 공격은 필요한 스택이 있는지 확인한 뒤 상태 전환이 성공했을 때 스택을 소비합니다.
 
-이 흐름은 일반 공격으로 자원을 얻고 차지 공격에 사용하는 전투 순환으로 연결됩니다. 현재 공개한 `Miyabi_Combo.cpp`는 입력 버퍼와 콤보 전환 중심의 이전 발췌본이며, 스택 획득·소비 코드는 아직 포함하지 않았습니다.
+이 흐름은 일반 공격으로 자원을 얻고 차지 공격에 사용하는 전투 순환으로 연결됩니다. 공개한 `Miyabi_Combo.cpp`는 최신 원본의 입력 버퍼와 콤보 전환을 발췌했습니다. 차지 스택 획득·소비 함수 자체는 포함하지 않았으며, 전투 매니저 샘플에서 적중 시 스택 갱신을 요청하는 호출을 확인할 수 있습니다.
 
 <details>
 <summary><b>세부 구현과 관련 코드</b></summary>
@@ -115,9 +132,14 @@
 
 피해를 적용한 뒤 대상 ID, 피해량, 피격 위치와 플레이어·몬스터 간 공격 구분을 담은 `EVENT_DAMAGE_TEXT`를 발행합니다. `CDamageTextHUD`는 이 이벤트를 구독해 데미지 숫자 표시를 처리합니다. 피해 판정과 화면 표시를 이벤트로 연결했습니다.
 
-현재 공개한 전투 매니저 샘플은 중복 피격·방어 판정 중심의 이전 발췌본입니다. 최신 피해 계산과 데미지 숫자 이벤트는 아직 샘플에 반영하지 않았습니다.
+전투 매니저 샘플에는 타격별 피해 계산과 몬스터 방어 계수, 데미지 숫자 이벤트 발행까지 포함했습니다. 숫자를 그리는 `CDamageTextHUD`의 구현은 공개 샘플에서 제외했습니다.
 
 #### 패링과 저스트 회피
+
+<p align="center">
+  <img src="docs/Images/Just_Evade.gif" width="400" alt="저스트 회피 시연"/><br/>
+  <sub>공격 타이밍에 맞춘 저스트 회피</sub>
+</p>
 
 공격 경고 영역과 실제 타격 영역에 대한 패링 처리를 구분합니다. 실제 패링에서는 대상과 공격 정보, 캐릭터 상태를 검사하고 연속 패링 여부에 따라 다음 타격을 기다리거나 반격 가능한 상태로 전환합니다.
 
@@ -125,13 +147,13 @@
 
 #### 시간 배율 제어
 
-플레이어와 몬스터의 시간 배율을 별도로 관리합니다. 패링 충돌 시에는 짧게 시간을 늦추고, 저스트 회피 시에는 두 대상에 서로 다른 지속 시간을 적용합니다. 설정 시간이 지나면 배율을 기본값으로 복구합니다.
+플레이어와 몬스터의 시간 배율을 별도로 관리합니다. 저스트 회피 시에는 두 대상에 서로 다른 지속 시간을 적용합니다. 설정 시간이 지나면 배율을 기본값으로 복구합니다.
 
 <details>
 <summary><b>세부 구현과 관련 코드</b></summary>
 
 - [CombatSystem_Manager.cpp](CodeSamples/Private/03_Combat/CombatSystem_Manager.cpp): 충돌 분류, 피격 기록, 다단 히트 제한, 방어 판정과 피해 전달.
-- [Miyabi_Defense.cpp](CodeSamples/Private/03_Combat/Miyabi_Defense.cpp): 패링 진입·충돌·연속 패링, 저스트 회피와 시간 배율 적용.
+- [Miyabi_Defense.cpp](CodeSamples/Private/03_Combat/Miyabi_Defense.cpp): 패링 진입·충돌·연속 패링, 저스트 회피와 시간 배율 적용. 패링 충돌 시 효과음 재생을 포함합니다.
 - [TimeScale_Manager.cpp](CodeSamples/Private/03_Combat/TimeScale_Manager.cpp): 시간 레이어별 배율과 지속 시간 관리.
 - [관련 헤더](CodeSamples/Public/03_Combat): 피격 기록과 방어 상태 관련 선언.
 - 공개한 저스트 회피 코드는 판정과 시간 제어를 중심으로 구성했습니다. 원본에 TODO로 남아 있는 후속 화면 효과는 구현 범위에 포함하지 않습니다.
@@ -153,8 +175,8 @@
 <details>
 <summary><b>세부 구현과 관련 코드</b></summary>
 
-- [InGameCamera.cpp](CodeSamples/Private/04_Camera/InGameCamera.cpp): 추적·마우스 회전, 궁극기 연출 진입·재생·복귀의 이전 발췌본. 최신 등장 연출과 복귀 시 방향 보정은 아직 미반영.
-- [CameraAnimClip.cpp](CodeSamples/Private/04_Camera/CameraAnimClip.cpp): 재생 시간에 따른 카메라 키프레임 보간.
+- [InGameCamera.cpp](CodeSamples/Private/04_Camera/InGameCamera.cpp): 추적·마우스 회전, 등장·궁극기 연출 진입과 공통 재생, 복귀 시 방향·추적 기준점 보정.
+- [CameraAnimClip.cpp](CodeSamples/Private/04_Camera/CameraAnimClip.cpp): 재생 시간에 따른 위치 보간과 Quaternion Slerp·정규화를 이용한 회전 보간.
 - [관련 헤더](CodeSamples/Public/04_Camera): 카메라 모드와 키프레임 자료구조.
 
 </details>
@@ -223,9 +245,9 @@ FMOD를 이용해 BGM과 효과음의 재생·정지·채널 그룹별 볼륨을
 
 함수 본문은 원본에서 발췌했으며, 생략한 부분은 `[중략]`으로 표시했습니다. 전체 프로젝트·공통 의존 코드·리소스는 포함하지 않아 **이 저장소만으로 빌드하거나 실행할 수 없습니다.** 헤더에는 발췌하지 않은 함수의 선언도 포함되어 있습니다.
 
-공개 샘플은 최신 원본의 모든 변경을 포함하지 않습니다. 타격별 피해 계산·데미지 숫자 이벤트, 차지 스택, 등장 카메라·복귀 보정, 레벨 간 상태 유지와 사운드 연동은 본문에 설명했으며 샘플 갱신은 별도로 진행할 예정입니다.
+공개한 함수와 헤더는 2026-10-26 기준 로컬 원본으로 갱신했습니다. 타격별 피해 계산·데미지 숫자 이벤트, 등장 카메라·복귀 보정을 포함합니다. 차지 스택 획득·소비 함수, 레벨 간 상태 유지, 사운드 매니저, UI 해상도 대응과 에디터 입력 차단은 발췌 범위 밖입니다. 일부 샘플에는 이 기능들을 호출하는 코드가 포함되어 있습니다.
 
-전체 파일 목록과 헤더 대응 관계는 [코드 샘플 안내](docs/CodeSamples.md)에서 확인할 수 있습니다.
+전체 파일 목록과 헤더 대응 관계, 최신 원본과의 비교 결과는 [코드 샘플 안내](docs/CodeSamples.md)에서 확인할 수 있습니다.
 
 ## 제작 목적 및 리소스 출처
 

@@ -283,7 +283,7 @@ void CCombatSystem_Manager::Resolve_HitCollision(const CCollision_Manager::COLLI
     {
         Add_HitRecord(dlAttackerID, dlTargetID, iAttackID, iHitBoxID);
 
-        Apply_Damage(Result, HitBoxDesc);
+        Apply_Damage(Result, HitBoxDesc, 0);
         return;
     }
 
@@ -299,7 +299,7 @@ void CCombatSystem_Manager::Resolve_HitCollision(const CCollision_Manager::COLLI
     pRecord->fHitTimer = 0.f;
     ++pRecord->iHitCount;
 
-    Apply_Damage(Result, HitBoxDesc);
+    Apply_Damage(Result, HitBoxDesc, pRecord->iHitCount - 1);
 }
 
 // [중략] 원본의 다른 함수 및 선언.
@@ -419,9 +419,8 @@ void CCombatSystem_Manager::Resolve_ParryImpactCollision(const CCollision_Manage
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 377~443행: Apply_Damage
-void CCombatSystem_Manager::Apply_Damage(const CCollision_Manager::COLLISION_RESULT& Result, const
-    Client::HITBOX_ACTIVE_DESC& HitBoxDesc)
+// 원본 377~471행: Apply_Damage
+void CCombatSystem_Manager::Apply_Damage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex)
 {
     if (Result.pSrcOwner == nullptr || Result.pDstOwner == nullptr)
         return;
@@ -432,7 +431,17 @@ void CCombatSystem_Manager::Apply_Damage(const CCollision_Manager::COLLISION_RES
 
     DAMAGE_DESC DamageDesc = {};
     DamageDesc.pAttacker = Result.pSrcOwner;
-    DamageDesc.fDamage = 10.f;
+
+    if (Result.iSrcGroup == ETOUI(COLLISION_GROUP::PLAYER_HITBOX) &&
+        Result.iDstGroup == ETOUI(COLLISION_GROUP::MONSTER_HURTBOX))
+    {
+        DamageDesc.fDamage = Calculate_PlayerDamage(Result, HitBoxDesc, iDamageRateIndex);
+    }
+    else
+    {
+        DamageDesc.fDamage = Calculate_MonsterDamage(Result, HitBoxDesc, iDamageRateIndex);
+    }
+
     DamageDesc.iAttackID = HitBoxDesc.iAttackID;
     DamageDesc.iHitBoxID = HitBoxDesc.iHitBoxID;
     DamageDesc.iColliderID = Result.iSrcColliderID;
@@ -475,22 +484,41 @@ void CCombatSystem_Manager::Apply_Damage(const CCollision_Manager::COLLISION_RES
 
     pDamageable->Take_Damage(DamageDesc);
 
-#ifdef _DEBUG
-    wchar_t szDebug[MAX_PATH] = {};
-    swprintf_s(
-        szDebug,
-        L"[Hit] AttackID: %u, HitBoxID: %u, ColliderID: %u\n",
-        DamageDesc.iAttackID,
-        DamageDesc.iHitBoxID,
-        DamageDesc.iColliderID);
+    EVENT_DAMAGE_TEXT EventDesc = {};
+    EventDesc.fDamage = DamageDesc.fDamage;
+    EventDesc.dlTargetID = Result.pDstOwner->Get_ObjectID();
 
-    OutputDebugStringW(szDebug);
-#endif
+    if (Result.iSrcGroup == ETOUI(COLLISION_GROUP::PLAYER_HITBOX) && 
+        Result.iDstGroup == ETOUI(COLLISION_GROUP::MONSTER_HURTBOX))
+    {
+        EventDesc.eType = DAMAGE_TEXT_TYPE::PLAYER_TO_MONSTER;
+        if (pMiyabi != nullptr)
+            pMiyabi->On_AttackHit_ForChargeStack(HitBoxDesc.iAttackID);
+    }
+    else if (Result.iSrcGroup == ETOUI(COLLISION_GROUP::MONSTER_HITBOX) &&
+             Result.iDstGroup == ETOUI(COLLISION_GROUP::PLAYER_HURTBOX))
+    {
+        EventDesc.eType = DAMAGE_TEXT_TYPE::MONSTER_TO_PLAYER;
+    }
+    else
+    {
+        return;
+    }
+
+    if (pDstTransform != nullptr)
+    {
+        _vector vPos = pDstTransform->Get_State(STATE::POSITION);
+        vPos += XMVectorSet(0.f, 1.5f, 0.f, 0.f);
+
+        XMStoreFloat3(&EventDesc.vWorldPos, vPos);
+    }
+
+    m_pGameInstance->Publish_Event<EVENT_DAMAGE_TEXT>(EventDesc);
 }
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 445~456행: Add_DefendedHitBox
+// 원본 473~484행: Add_DefendedHitBox
 void CCombatSystem_Manager::Add_DefendedHitBox(_udlong dlAttackerID, _uint iAttackID, _uint iHitBoxID)
 {
     if (Is_DefendedHitBox(dlAttackerID, iAttackID, iHitBoxID))
@@ -506,7 +534,7 @@ void CCombatSystem_Manager::Add_DefendedHitBox(_udlong dlAttackerID, _uint iAtta
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 458~472행: Clear_DefendedHitBoxes
+// 원본 486~500행: Clear_DefendedHitBoxes
 void CCombatSystem_Manager::Clear_DefendedHitBoxes(_udlong dlAttackerID, _uint iAttackID)
 {
     for (auto iter = m_DefendedHitBoxRecords.begin(); iter != m_DefendedHitBoxRecords.end();)
@@ -520,6 +548,83 @@ void CCombatSystem_Manager::Clear_DefendedHitBoxes(_udlong dlAttackerID, _uint i
         {
             ++iter;
         }
+    }
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 502~513행: Get_HitDamageRatePercent
+_float CCombatSystem_Manager::Get_HitDamageRatePercent(const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex) const
+{
+    if (!HitBoxDesc.DamageRatePercents.empty())
+    {
+        if (iDamageRateIndex < HitBoxDesc.DamageRatePercents.size())
+            return HitBoxDesc.DamageRatePercents[iDamageRateIndex];
+
+        return HitBoxDesc.DamageRatePercents.back();
+    }
+
+    return 100.f;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 515~531행: Calculate_PlayerDamage
+_float CCombatSystem_Manager::Calculate_PlayerDamage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex) const
+{
+    CMiyabi* pMiyabi = dynamic_cast<CMiyabi*>(Result.pSrcOwner);
+    CMonster* pMonster = dynamic_cast<CMonster*>(Result.pDstOwner);
+
+    if (pMiyabi == nullptr || pMonster == nullptr)
+        return 10.f;
+
+    const _float fAttackPower = pMiyabi->Get_AttackPower();
+    const _float fRatePercent = Get_HitDamageRatePercent(HitBoxDesc, iDamageRateIndex);
+    const _float fBaseDamage = fAttackPower * (fRatePercent * 0.01f);
+
+    const _float fDefenseCoeff = Calculate_MonsterDefenseCoeff(pMonster);
+    const _float fGroggyMultiplier = pMonster->Is_Groggy() ? 1.5f : 1.f;
+
+    return fBaseDamage * fDefenseCoeff * fGroggyMultiplier * 5.f;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 533~544행: Calculate_MonsterDamage
+_float CCombatSystem_Manager::Calculate_MonsterDamage(const CCollision_Manager::COLLISION_RESULT& Result, const HITBOX_ACTIVE_DESC& HitBoxDesc, _uint iDamageRateIndex) const
+{
+    CMonster* pMonster = dynamic_cast<CMonster*>(Result.pSrcOwner);
+
+    if (pMonster == nullptr)
+        return 10.f;
+
+    const _float fAttackPower = pMonster->Get_AttackPower();
+    const _float fRatePercent = Get_HitDamageRatePercent(HitBoxDesc, iDamageRateIndex);
+
+    return fAttackPower * (fRatePercent * 0.01f);
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 546~565행: Calculate_MonsterDefenseCoeff
+_float CCombatSystem_Manager::Calculate_MonsterDefenseCoeff(CMonster* pMonster) const
+{
+    if (pMonster == nullptr)
+        return 1.f;
+
+    switch (pMonster->Get_MonsterRank())
+    {
+    case CMonster::MONSTER_RANK::NORMAL:
+        return 1.f;
+
+    case CMonster::MONSTER_RANK::ELITE:
+        return 0.8f;
+
+    case CMonster::MONSTER_RANK::BOSS:
+        return 0.6f;
+
+    default:
+        return 1.f;
     }
 }
 

@@ -36,7 +36,28 @@ void CInGameCamera::Request_Ultimate(CTransform* pActor)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 102~122행: Late_Update
+// 원본 55~71행: Request_Opening
+void CInGameCamera::Request_Opening(CTransform* pActor)
+{
+	if (pActor == nullptr)
+		return;
+
+	if (m_pQuestClip == nullptr || !m_pQuestClip->Is_Loaded())
+		return;
+
+	m_pLookTarget = pActor;
+
+	XMStoreFloat4x4(&m_ScriptBaseWorld, XMLoadFloat4x4(pActor->Get_WorldMatrixPtr()));
+
+	m_fScriptTime = 0.f;
+	m_fScriptDuration = m_pQuestClip->Get_Duration();
+
+	Request_Mode(INGAME_CAMERA_MODE::OPNEING);
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 124~148행: Late_Update
 void CInGameCamera::Late_Update(_float fTimeDelta)
 {
 	switch (m_eMode)
@@ -49,7 +70,11 @@ void CInGameCamera::Late_Update(_float fTimeDelta)
 		break;
 
 	case INGAME_CAMERA_MODE::ULTIMATE:
-		Update_Ultimate(fTimeDelta);
+		Update_Camera(m_pUltCamClip, fTimeDelta);
+		break;
+		
+	case INGAME_CAMERA_MODE::OPNEING:
+		Update_Camera(m_pQuestClip, fTimeDelta);
 		break;
 
 	case INGAME_CAMERA_MODE::SCRIPTED:
@@ -61,7 +86,7 @@ void CInGameCamera::Late_Update(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 129~157행: Update_Follow
+// 원본 155~183행: Update_Follow
 void CInGameCamera::Update_Follow(_float fTimeDelta)
 {
 	if (m_pFollowTarget == nullptr)
@@ -94,7 +119,7 @@ void CInGameCamera::Update_Follow(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 159~177행: Update_Input
+// 원본 185~203행: Update_Input
 void CInGameCamera::Update_Input(_float fTimeDelta)
 {
 	_long MouseMoveX = m_pGameInstance->Get_MouseDelta(RIMM::X);
@@ -117,12 +142,18 @@ void CInGameCamera::Update_Input(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 179~210행: Update_Ultimate
-void CInGameCamera::Update_Ultimate(_float fTimeDelta)
+// 원본 205~242행: Update_Camera
+void CInGameCamera::Update_Camera(CCameraAnimClip* pCamClip, _float fTimeDelta)
 {
-	if (!m_pUltCamClip->Is_Loaded())
+	if (pCamClip == nullptr || !pCamClip->Is_Loaded())
 	{
-		End_Ultimate();
+		End_CamClip();
+		return;
+	}
+
+	if (!pCamClip->Is_Loaded())
+	{
+		End_CamClip();
 		return;
 	}
 
@@ -130,16 +161,16 @@ void CInGameCamera::Update_Ultimate(_float fTimeDelta)
 
 	if (m_fScriptTime >= m_fScriptDuration)
 	{
-		End_Ultimate();
+		End_CamClip();
 		return;
 	}
 
 	CAMERA_ANIM_KEY Key = {};
-	m_pUltCamClip->Sample(m_fScriptTime, Key);
+	pCamClip->Sample(m_fScriptTime, Key);
 
 	_matrix LocalRot = XMMatrixRotationQuaternion(XMLoadFloat4(&Key.vRotation));
 	_matrix LocalTrans = XMMatrixTranslation(Key.vPosition.x, Key.vPosition.y, Key.vPosition.z);
-
+	
 	_matrix LocalCamera = LocalRot * LocalTrans;
 	_matrix BaseWorld = XMLoadFloat4x4(&m_ScriptBaseWorld);
 
@@ -153,18 +184,34 @@ void CInGameCamera::Update_Ultimate(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 212~226행: End_Ultimate
-void CInGameCamera::End_Ultimate()
+// 원본 244~274행: End_CamClip
+void CInGameCamera::End_CamClip()
 {
 	m_fScriptTime = 0.f;
 	m_fScriptDuration = 0.f;
-
+	
 	if (m_pFollowTarget != nullptr)
 	{
-		CAMERA_FOCUS_INFO Info = m_pFollowTarget->Get_CameraForcusInfo();
-		_vector vTarget = XMLoadFloat3(&Info.vFocusPosition) + XMVectorSet(0.f, m_fHeight, 0.f, 0.f);
+		_vector vCamPos = m_pTransformCom->Get_State(STATE::POSITION);
+		_vector vCamLook = XMVector3Normalize(m_pTransformCom->Get_State(STATE::LOOK));
 
-		XMStoreFloat4(&m_vLerpPos, vTarget);
+		_float fLookX = XMVectorGetX(vCamLook);
+		_float fLookY = XMVectorGetY(vCamLook);
+		_float fLookZ = XMVectorGetZ(vCamLook);
+
+		m_fYaw = atan2f(fLookX, fLookZ);
+		m_fPitch = asinf(max(-1.f, min(1.f, fLookY)));
+
+		m_fPitch = max(m_fPitchMin, min(m_fPitch, m_fPitchMax));
+
+		_vector qYaw = XMQuaternionRotationAxis(XMVectorSet(0.f, 1.f, 0.f, 0.f), m_fYaw);
+		_vector qPitch = XMQuaternionRotationAxis(XMVectorSet(1.f, 0.f, 0.f, 0.f), m_fPitch);
+		_vector q = XMQuaternionMultiply(qPitch, qYaw);
+
+		XMStoreFloat4(&m_vQuaternion, q);
+
+		_vector vFollowCenter = vCamPos + vCamLook * m_fDistance;
+		XMStoreFloat4(&m_vLerpPos, XMVectorSetW(vFollowCenter, 1.f));
 	}
 
 	Request_Mode(INGAME_CAMERA_MODE::FOLLOW);

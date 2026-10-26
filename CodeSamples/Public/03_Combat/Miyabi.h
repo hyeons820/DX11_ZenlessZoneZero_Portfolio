@@ -1,9 +1,11 @@
-﻿#pragma once
+#pragma once
 #include "Client_Defines.h"
 #include "Character.h"
 #include "DefensiveResponder.h"
 
 NS_BEGIN(Client)
+
+struct PLAYER_RUNTIME_DESC;
 
 class CMiyabi final : public CCharacter, public IDefensiveResponder
 {
@@ -40,6 +42,8 @@ private:
 	enum class MIYABI_ACTION
 	{
 		NONE = 0,
+
+		QUEST_START,
 
 		EVADE_BACK_DEFAULT,
 		EVADE_FRONT,
@@ -87,13 +91,6 @@ public:
 	virtual _bool	Try_JustEvade(const DAMAGE_DESC& DamageDesc) override;
 	virtual _bool	Try_Parry(const DAMAGE_DESC& DamageDesc) override;
 	virtual _bool	Try_ParryImpact(const DAMAGE_DESC& DamageDesc) override;
-	virtual _bool	Should_IgnoreBodyCollision() const override
-	{
-		if (m_pStateCom == nullptr)
-			return false;
-
-		return m_pStateCom->Get_MainState() == MAIN_STATE::EVADE;
-	}
 
 public:
 	_float Get_SPRatio() const
@@ -167,6 +164,19 @@ public:
 		return m_pStateCom->Get_MainState() == MAIN_STATE::EVADE;
 	}
 
+	_float Get_AttackPower() const { return 3500.f; }
+	_float Get_SkillDamageRate(_uint iAttackID) const;
+	_uint  Get_SkillDamageHitCount(_uint iAttackID) const;
+
+	void Add_ChargeStack(_uint iAmount);
+	void On_AttackHit_ForChargeStack(_uint iAttackID);
+
+	PLAYER_RUNTIME_DESC Make_RuntimeDesc() const;
+	void Apply_RuntimeDesc(const PLAYER_RUNTIME_DESC& Desc);
+
+	void Start_QuestStart();
+	_bool Is_QuestStartPlaying() const;
+
 public:
 	virtual HRESULT Initialize_Prototype() override;
 	virtual HRESULT Initialize(const GAMEOBJECT_DESC* pDesc) override;
@@ -187,6 +197,15 @@ private:
 
 	_float m_fWalkMaintainTime = {};								// 걷기를 유지한 누적 시간
 	_bool  m_bForceRunAfterDirectionalEvade = { false };			// 방향성 회피 후 이동 입력 유지 시 Run으로 복귀시키는 플래그
+
+	_bool m_bQuestStartPlaying = false;
+
+	_bool m_bNormal01EffectSpawned = false;
+	_bool m_bNormal03TrailSpawned = false;
+
+	_float m_fPendingVoiceTime = {};
+	_bool  m_bPendingVoice = {};
+	_wstring m_strPendingVoiceKey = {};
 
 #pragma region 회피
 	_uint  m_iCurEvadeStack = { 2 };								// 현재 사용 가능한 회피 스택 수
@@ -218,13 +237,15 @@ private:
 	_bool  m_bPierceAttack = { false };
 	_float m_fNonPierceStopDistance = { 1.35f };
 	_float m_fAttackTargetSearchRange = { 6.f };
+
+	_uint m_iLastNormalAttackSoundID = { UINT_MAX };
 #pragma endregion
 
 
 #pragma region 특수기
 	_float m_fCurSpecialGauge = { 100.f };
 	_float m_fMaxSpecialGauge = { 100.f };
-	_float m_fSpecialCost = { 30.f };
+	_float m_fSpecialCost = { 35.f };
 	_float m_fSpecialRegenPerSec = { 0.5f };
 #pragma endregion
 
@@ -253,13 +274,15 @@ private:
 	_uint  m_iMaxChargeHitIndex = { 3 };			// 최대 3타
 	_uint  m_iPendingChargeHitIndex = {};
 
-	_bool   m_bNeedFix = false;
-	_bool   m_bChargeEnd3LookFixed = false;
+	_bool   m_bNeedFix = { false };
+	_bool   m_bChargeEnd3LookFixed = { false };
 	_float3 m_vChargeEnd3FinalLook = {};
 
 	_bool   m_bChargeHitAreaReady = { false };
 	_float3 m_vChargeHitCenter = {};
 	_float  m_fChargeHitRadius = { 1.f };
+
+	_bool m_bNormalAttack5ChargeStackGranted = { false };
 #pragma endregion
 
 
@@ -415,6 +438,12 @@ private:
 	// 피격
 	_float	Get_HitFinishTime(HIT_REACTION_TYPE eReactionType) const;
 #pragma endregion
+
+private:
+	void Play_RandomNormalVoice();
+	void Play_RandomChargeVoice();
+	void Play_RandomHitVoice(HIT_REACTION_TYPE eReactionType);
+	void Update_PendingVoice(_float fTimeDelta);
 
 public:
 	static CMiyabi* Create(ID3D11Device* pDevice, ID3D11DeviceContext* pContext);

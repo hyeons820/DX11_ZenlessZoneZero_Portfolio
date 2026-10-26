@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Component.h"
 #include "Model_Format.h"
 
@@ -98,6 +98,7 @@ public:
     HRESULT Render_All_Except(CShader* pShader, _uint iPassIndex, _int iExceptMeshIndex);    // 특정 메쉬를 제외하고 렌더
     HRESULT Render_Mesh(CShader* pShader, _uint iMeshIndex, _uint iPassIndex);               // 지정한 메쉬 하나만 렌더
     HRESULT Render_MeshRange(CShader* pShader, _uint iStartMeshIndex, _uint iEndMeshIndex, _uint iPassIndex);   // 지정 범위 메쉬 렌더
+    HRESULT Render_All_NoMaterial(CShader* pShader, _uint iPassIndex = 0);
     HRESULT Intersect_Ray(_fmatrix WorldMatrix, _fvector vRayOriginWorld, _fvector vRayDirWorld, _float& fOutDistance) const;   // 월드 레이를 모델 로컬로 변환해 메쉬 충돌 검사
 
     HRESULT Reset_NodeLocalMatrices();                                              // 노드 로컬 행렬을 원본 로컬 행렬로 초기화

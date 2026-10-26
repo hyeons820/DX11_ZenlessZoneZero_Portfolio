@@ -1,8 +1,25 @@
-﻿# Zenless Zone Zero · DirectX 11 코드 샘플
+# Zenless Zone Zero · DirectX 11 코드 샘플
 
-> 이 목록은 기존 발췌 코드 기준입니다. 최신 원본의 피해 계산·데미지 숫자 이벤트, 차지 스택, 등장 카메라·복귀 보정, 레벨 간 상태 유지와 사운드 기능은 아직 샘플에 포함하지 않았습니다. 최신 구현 설명은 [프로젝트 README](../README.md)를 참고하세요.
+> 공개 함수와 헤더를 2026-10-26 기준 로컬 원본으로 갱신했습니다. 구현 설명과 시연은 [프로젝트 README](../README.md)를 참고하세요.
 
 게임 구현을 설명하기 위해 핵심 함수만 발췌한 자료입니다. 전체 프로젝트와 리소스는 포함하지 않았으며, 이 저장소만으로 빌드하거나 실행할 수 없습니다.
+
+## 최신 원본 반영 내역 (2026-10-26)
+
+구현 샘플 14개에 포함된 함수 85개와 헤더 12개를 로컬 원본 기준으로 갱신했습니다. 함수 본문은 그대로 발췌하고 원본 행 번호를 다시 기록했습니다. 헤더는 원본 내용을 UTF-8로 저장했습니다.
+
+| 샘플 | 반영한 내용 |
+| --- | --- |
+| `Miyabi_Combo.cpp` | 일반 공격 시작 시 카메라 포커스 처리, 공격별 이펙트 이벤트·효과음·랜덤 보이스 호출 |
+| `CombatSystem_Manager.cpp` | 타격 순번 전달, 타격별 피해 계산, 몬스터 방어·그로기 보정, 데미지 숫자 이벤트와 차지 스택 갱신 호출. 피해 계산 보조 함수 4개 추가 |
+| `Miyabi_Defense.cpp` | 최신 패링 처리 반영: 패링 시간 배율 호출 제거와 효과음 재생 |
+| `CameraAnimClip.cpp` | Quaternion Slerp와 정규화를 이용한 회전 보간 |
+| `InGameCamera.cpp` | 등장 연출 요청 추가, 등장·궁극기 공통 재생과 종료 처리, 추적 복귀 시 방향·기준점 보정 |
+| 관련 헤더 | `Character.h`, `Model.h`, `Miyabi.h` 사본 2개, `CombatSystem_Manager.h`, `InGameCamera.h` 갱신 |
+
+에디터, 루트 모션·모델 애니메이션, 시간 배율 매니저, 렌더러·셰이더도 발췌 함수와 원본을 대조했습니다. 이 확인은 공개한 함수에 대한 것으로, 원본 파일 전체를 공개했다는 의미는 아닙니다.
+
+차지 스택 획득·소비 함수, 레벨 간 상태 유지, 사운드 매니저, 데미지 숫자 렌더링, 해상도별 UI 크기 조절, 에디터에서의 미야비 입력 차단은 발췌 범위에 포함하지 않았습니다. 일부 샘플에서 이 기능들을 호출하므로, 관련 선언이나 의존 구현 없이 단독 빌드할 수 없습니다.
 
 ## 읽는 순서
 
@@ -11,7 +28,7 @@
 | 에디터 | Controller의 편집 요청 → Bridge의 오브젝트 접근·피킹 → 내비게이션 셀 제작 |
 | 애니메이션·조작 | Model의 블렌딩·루트 이동량 → Character의 이동 반영 → Miyabi의 입력 버퍼·콤보 |
 | 전투 | 충돌 분류 → 공격별 피격 기록 → 패링·회피 판정 → 시간 배율 제어 |
-| 카메라 | 추적 → 궁극기 카메라 키프레임 보간 → 추적 복귀 |
+| 카메라 | 추적 → 등장·궁극기 카메라 키프레임 보간 → 방향·기준점 보정 후 추적 복귀 |
 | 렌더링 | G-buffer → 툰 조명 → 캐릭터 재질을 반영한 합성 |
 
 구현 파일(cpp, hlsl)은 `CodeSamples/Private`, 헤더(h)는 `CodeSamples/Public`에 배치하고, 양쪽에 동일한 01~05 기능별 폴더를 유지합니다.
@@ -29,7 +46,7 @@
 | [03_Combat/CombatSystem_Manager.cpp](../CodeSamples/Private/03_Combat/CombatSystem_Manager.cpp) | 충돌 분류, 중복·다단 피격 기록, 방어 판정과 피해 처리 | `Client/Private/CombatSystem_Manager.cpp` |
 | [03_Combat/Miyabi_Defense.cpp](../CodeSamples/Private/03_Combat/Miyabi_Defense.cpp) | 패링 진입·연속 패링·저스트 회피와 시간 배율 적용 | `Client/Private/Miyabi.cpp` |
 | [03_Combat/TimeScale_Manager.cpp](../CodeSamples/Private/03_Combat/TimeScale_Manager.cpp) | 플레이어·몬스터 등 시간 레이어별 배율과 지속 시간 관리 | `Engine/Private/TimeScale_Manager.cpp` |
-| [04_Camera/InGameCamera.cpp](../CodeSamples/Private/04_Camera/InGameCamera.cpp) | 추적 카메라에서 궁극기 카메라 애니메이션으로 전환한 뒤 복귀 | `Client/Private/InGameCamera.cpp` |
+| [04_Camera/InGameCamera.cpp](../CodeSamples/Private/04_Camera/InGameCamera.cpp) | 추적 카메라와 등장·궁극기 공통 재생, 종료 후 방향·기준점 복원 | `Client/Private/InGameCamera.cpp` |
 | [04_Camera/CameraAnimClip.cpp](../CodeSamples/Private/04_Camera/CameraAnimClip.cpp) | 카메라 키프레임의 위치·회전을 시간에 따라 보간 | `Client/Private/CameraAnimClip.cpp` |
 | [05_Rendering/Renderer.cpp](../CodeSamples/Private/05_Rendering/Renderer.cpp) | G-buffer 렌더링, 조명 누적, 최종 합성의 연결 | `Engine/Private/Renderer.cpp` |
 | [05_Rendering/ToonLighting.hlsl](../CodeSamples/Private/05_Rendering/ToonLighting.hlsl) | 단계형 툰 음영과 재질 버퍼를 이용한 최종 합성 | `Engine/Bin/ShaderFiles/Shader_Deferred.hlsl` |
@@ -58,4 +75,4 @@
 - 본문이 비어 있는 락온 요청 함수와 위치가 확인되지 않은 소스 템플릿 자동 생성 기능은 제외했습니다.
 - 외부 라이브러리 소스, 모델·텍스처·음원, 실행 파일과 빌드 산출물은 포함하지 않았습니다.
 
-현재 문서는 코드 샘플 안내입니다. 최종 포트폴리오 소개에는 개발 기간, 시연 GIF와 함께 직접 구현·확장한 범위를 정리할 예정입니다.
+시연 GIF와 구현 설명은 [프로젝트 README](../README.md)에서 확인할 수 있습니다.

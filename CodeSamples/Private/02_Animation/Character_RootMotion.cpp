@@ -3,7 +3,7 @@
 // [중략] include·클래스/자료형 선언·초기화 및 관련 보조 구현은 전체 프로젝트에 있습니다.
 // 아래 함수 본문은 원본 그대로이며, 이 파일만으로 빌드하거나 실행할 수 없습니다.
 
-// 원본 52~111행: Update
+// 원본 60~119행: Update
 void CCharacter::Update(_float fTimeDelta)
 {
     Update_MoveVelocity(fTimeDelta);
@@ -67,7 +67,7 @@ void CCharacter::Update(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 224~247행: Apply_RootMotion
+// 원본 232~255행: Apply_RootMotion
 void CCharacter::Apply_RootMotion()
 {
     _float3 vDeltaLocal = m_pModelCom->Get_RootMotionDeltaLocal();
@@ -95,7 +95,7 @@ void CCharacter::Apply_RootMotion()
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 367~386행: Update_AttackEndEvent
+// 원본 375~394행: Update_AttackEndEvent
 void CCharacter::Update_AttackEndEvent()
 {
     const _bool bIsAttackActionState = Is_AttackActionState();

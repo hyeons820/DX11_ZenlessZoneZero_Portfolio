@@ -26,7 +26,7 @@ HRESULT CModel::Get_CurrentAnimSyncInfo(ANIM_SYNC_INFO& OutInfo) const
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 361~423행: Play_Animation
+// 원본 381~443행: Play_Animation
 ANIMATION_UPDATE_RESULT CModel::Play_Animation(_float fTimeDelta)
 {
 	ANIMATION_UPDATE_RESULT Result = {};
@@ -93,7 +93,7 @@ ANIMATION_UPDATE_RESULT CModel::Play_Animation(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 425~485행: Change_Animation
+// 원본 445~505행: Change_Animation
 HRESULT CModel::Change_Animation(_uint iNextIndex, _double fBlendTime, _bool bLoop)
 {
 	if (iNextIndex >= m_Animations.size())
@@ -158,7 +158,7 @@ HRESULT CModel::Change_Animation(_uint iNextIndex, _double fBlendTime, _bool bLo
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 488~517행: Blend_NodeLocalMatrices
+// 원본 508~537행: Blend_NodeLocalMatrices
 HRESULT CModel::Blend_NodeLocalMatrices(const vector<_float4x4>& SourMat, const vector<_float4x4>& DestMat, _float fWeight, vector<_float4x4>& OutMat)
 {
 	if (SourMat.size() != DestMat.size())
@@ -192,7 +192,7 @@ HRESULT CModel::Blend_NodeLocalMatrices(const vector<_float4x4>& SourMat, const 
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 585~641행: Consume_RootMotion
+// 원본 605~661행: Consume_RootMotion
 HRESULT CModel::Consume_RootMotion()
 {
 	// 이번 프레임의 이동량 초기화

@@ -3,7 +3,7 @@
 // [중략] include·클래스/자료형 선언·초기화 및 관련 보조 구현은 전체 프로젝트에 있습니다.
 // 아래 함수 본문은 원본 그대로이며, 이 파일만으로 빌드하거나 실행할 수 없습니다.
 
-// 원본 2226~2291행: Start_Parry
+// 원본 2640~2705행: Start_Parry
 _bool CMiyabi::Start_Parry(CGameObject* pTarget, HIT_REACTION_TYPE eReactionType)
 {
     if (pTarget == nullptr || m_pTransformCom == nullptr)
@@ -73,7 +73,7 @@ _bool CMiyabi::Start_Parry(CGameObject* pTarget, HIT_REACTION_TYPE eReactionType
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 2431~2442행: Try_JustEvade
+// 원본 2849~2860행: Try_JustEvade
 _bool CMiyabi::Try_JustEvade(const DAMAGE_DESC& DamageDesc)
 {
     if (m_pStateCom->Get_MainState() != MAIN_STATE::EVADE)
@@ -89,7 +89,7 @@ _bool CMiyabi::Try_JustEvade(const DAMAGE_DESC& DamageDesc)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 2444~2460행: Try_Parry
+// 원본 2862~2878행: Try_Parry
 _bool CMiyabi::Try_Parry(const DAMAGE_DESC& DamageDesc)
 {
     if (!m_bParryWarningBoxActive)
@@ -110,7 +110,7 @@ _bool CMiyabi::Try_Parry(const DAMAGE_DESC& DamageDesc)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 2462~2553행: Try_ParryImpact
+// 원본 2880~2970행: Try_ParryImpact
 _bool CMiyabi::Try_ParryImpact(const DAMAGE_DESC& DamageDesc)
 {
     if (!m_bParryImpactBoxActive)
@@ -156,8 +156,7 @@ _bool CMiyabi::Try_ParryImpact(const DAMAGE_DESC& DamageDesc)
     if (!m_pStateCom->Request_State(Request))
         return false;
 
-    m_pGameInstance->Set_TimeScale(TIME_LAYER::MONSTER, 0.2f, 0.05f);
-    m_pGameInstance->Set_TimeScale(TIME_LAYER::PLAYER, 0.2f, 0.05f);
+    m_pGameInstance->PlaySFX(L"Parry_SFX", SOUND_CHANNEL::PLAYER, 1.f);
 
     m_eLastParryReactionType = DamageDesc.eReactionType;
 
@@ -206,7 +205,7 @@ _bool CMiyabi::Try_ParryImpact(const DAMAGE_DESC& DamageDesc)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 2555~2570행: Start_JustEvade
+// 원본 2972~2987행: Start_JustEvade
 void CMiyabi::Start_JustEvade(const DAMAGE_DESC& DamageDesc)
 {
     m_bJustEvadeTriggered = true;

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Client_Defines.h"
 #include "GameObject.h"
 #include "HitBoxProvider.h"
@@ -39,7 +39,7 @@ protected:
 #endif
 
 public:
-	virtual _bool Should_IgnoreBodyCollision() const { return false; }
+	virtual _bool Should_IgnoreBodyCollision() const;
 
 public:
 	_float Get_CurHP() const { return m_fCurHP; }
