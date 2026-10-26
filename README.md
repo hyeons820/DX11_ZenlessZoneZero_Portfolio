@@ -243,8 +243,20 @@ FMOD를 이용해 BGM과 효과음의 재생·정지·채널 그룹별 볼륨을
 
 주요 구현을 설명하는 **구현 샘플 14개와 헤더 12개**를 공개합니다. 구현 파일은 `CodeSamples/Private`, 헤더는 `CodeSamples/Public`에 배치하고, 각 폴더를 01~05 기능별로 나눴습니다.
 
-함수 본문은 원본에서 발췌했으며, 생략한 부분은 `[중략]`으로 표시했습니다. 전체 프로젝트·공통 의존 코드·리소스는 포함하지 않아 **이 저장소만으로 빌드하거나 실행할 수 없습니다.** 헤더에는 발췌하지 않은 함수의 선언도 포함되어 있습니다.
+진입 함수부터 핵심 처리와 결과 반영까지 따라갈 수 있도록 발췌했습니다. 함수 내부는 원본 그대로 유지하고, 제외한 함수와 공통 구현은 `[중략]`으로 표시했습니다. 전체 프로젝트·공통 의존 코드·리소스는 포함하지 않아 **이 저장소만으로 빌드하거나 실행할 수 없습니다.** 헤더에는 발췌하지 않은 함수의 선언도 포함되어 있습니다.
 
+
+
+### 코드 읽는 순서
+
+| 흐름 | 확인할 샘플 |
+| --- | --- |
+| 입력 → 콤보 | [Miyabi_Combo.cpp](CodeSamples/Private/02_Animation/Miyabi_Combo.cpp)의 `Update` → 입력 문맥·상태별 입력 → 공격 버퍼 → 일반 공격 상태 요청 |
+| 상태 → 애니메이션 → 이동 | [Character_RootMotion.cpp](CodeSamples/Private/02_Animation/Character_RootMotion.cpp)의 `Update` → [Model_Animation.cpp](CodeSamples/Private/02_Animation/Model_Animation.cpp)의 재생·블렌딩·본 행렬 갱신 → 캐릭터의 루트 이동 반영 |
+| 충돌 → 피해·방어 | [CombatSystem_Manager.cpp](CodeSamples/Private/03_Combat/CombatSystem_Manager.cpp)의 충돌 분류 → 피해 계산·이벤트 또는 [Miyabi_Defense.cpp](CodeSamples/Private/03_Combat/Miyabi_Defense.cpp)의 패링·저스트 회피 처리 |
+| 카메라 요청 → 재생 → 복귀 | [InGameCamera.cpp](CodeSamples/Private/04_Camera/InGameCamera.cpp)의 추적 대상·연출 요청 → 모드별 갱신 → [CameraAnimClip.cpp](CodeSamples/Private/04_Camera/CameraAnimClip.cpp)의 샘플링 → 추적 복귀 |
+
+상태별 애니메이션 번호 매핑, 이동·차지·특수기 개별 입력 처리, 개별 애니메이션 채널과 오버레이 등은 중략했습니다. 함수가 다른 샘플에 있으면 위 흐름을 따라 읽을 수 있으며, 공통 엔진과 발췌하지 않은 보조 함수는 원본 프로젝트에 있습니다.
 
 ## 제작 목적 및 리소스 출처
 

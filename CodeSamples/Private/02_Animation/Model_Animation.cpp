@@ -2,6 +2,7 @@
 // 원본: Engine/Private/Model.cpp
 // [중략] include·클래스/자료형 선언·초기화 및 관련 보조 구현은 전체 프로젝트에 있습니다.
 // 아래 함수 본문은 원본 그대로이며, 이 파일만으로 빌드하거나 실행할 수 없습니다.
+// 읽는 흐름: 애니메이션 변경 요청 → 재생·블렌딩 → 루트 이동 추출 → 계층 행렬·최종 본 행렬 반영. 오버레이와 개별 채널의 키프레임 샘플링은 중략했습니다.
 
 // 원본 85~103행: Get_CurrentAnimSyncInfo
 HRESULT CModel::Get_CurrentAnimSyncInfo(ANIM_SYNC_INFO& OutInfo) const
@@ -20,6 +21,71 @@ HRESULT CModel::Get_CurrentAnimSyncInfo(ANIM_SYNC_INFO& OutInfo) const
 	OutInfo.fDuration = pAnim->Get_Duration();
 	OutInfo.fNormalizedTime = pAnim->Get_NormalizedTime();
 	OutInfo.bBlending = m_bBlending;
+
+	return S_OK;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 445~505행: Change_Animation
+HRESULT CModel::Change_Animation(_uint iNextIndex, _double fBlendTime, _bool bLoop)
+{
+	if (iNextIndex >= m_Animations.size())
+		return E_FAIL;
+
+	// 이미 블렌딩 중이라면
+	if (m_bBlending)
+	{
+		// 같은 애니로 바꾸려고 할 때
+		if (iNextIndex == m_iNextAnimationIndex)
+		{
+			m_bLoop = bLoop;
+			return S_OK;
+		}
+
+		// 블렌딩 중인데 다시 현재 애니메이션으로 돌아가려 할 때
+		// Idle -> Start 블렌딩 중 Idle
+		if (iNextIndex == m_iCurrentAnimationIndex)
+		{
+			m_bBlending = false;
+
+			m_iNextAnimationIndex = m_iCurrentAnimationIndex;
+
+			m_bLoop = bLoop;
+			m_bNextLoop = bLoop;
+
+			m_fBlendDuration = 0.f;
+			m_fBlendAccTime = 0.f;
+
+			return S_OK;
+		}
+	}
+	else
+	{
+		if (iNextIndex == m_iCurrentAnimationIndex)
+		{
+			m_bLoop = bLoop;
+			return S_OK;
+		}
+	}
+	
+
+	m_iNextAnimationIndex = iNextIndex;
+	m_bNextLoop = bLoop;
+	m_fBlendDuration = max(0.f, fBlendTime);
+	m_fBlendAccTime = 0.0f;
+	m_bBlending = (m_fBlendDuration > 0.f);
+
+	m_Animations[m_iNextAnimationIndex]->Reset_TrackPosition();
+	m_bRootMotionInitialized = false;
+	m_vPrevRootMotions = _float3(0.f, 0.f, 0.f);
+	m_vRootMotionDeltaLocal = _float3(0.f, 0.f, 0.f);
+
+	if (!m_bBlending)
+	{
+		m_iCurrentAnimationIndex = iNextIndex;
+		m_bLoop = bLoop;
+	}
 
 	return S_OK;
 }
@@ -93,64 +159,15 @@ ANIMATION_UPDATE_RESULT CModel::Play_Animation(_float fTimeDelta)
 
 // [중략] 원본의 다른 함수 및 선언.
 
-// 원본 445~505행: Change_Animation
-HRESULT CModel::Change_Animation(_uint iNextIndex, _double fBlendTime, _bool bLoop)
+// 원본 664~675행: Reset_NodeLocalMatrices
+HRESULT CModel::Reset_NodeLocalMatrices()
 {
-	if (iNextIndex >= m_Animations.size())
-		return E_FAIL;
+	if (m_NodeLocalMatrices.size() != m_Nodes.size())
+		m_NodeLocalMatrices.resize(m_Nodes.size());
 
-	// 이미 블렌딩 중이라면
-	if (m_bBlending)
+	for (size_t i = 0; i < m_Nodes.size(); i++)
 	{
-		// 같은 애니로 바꾸려고 할 때
-		if (iNextIndex == m_iNextAnimationIndex)
-		{
-			m_bLoop = bLoop;
-			return S_OK;
-		}
-
-		// 블렌딩 중인데 다시 현재 애니메이션으로 돌아가려 할 때
-		// Idle -> Start 블렌딩 중 Idle
-		if (iNextIndex == m_iCurrentAnimationIndex)
-		{
-			m_bBlending = false;
-
-			m_iNextAnimationIndex = m_iCurrentAnimationIndex;
-
-			m_bLoop = bLoop;
-			m_bNextLoop = bLoop;
-
-			m_fBlendDuration = 0.f;
-			m_fBlendAccTime = 0.f;
-
-			return S_OK;
-		}
-	}
-	else
-	{
-		if (iNextIndex == m_iCurrentAnimationIndex)
-		{
-			m_bLoop = bLoop;
-			return S_OK;
-		}
-	}
-	
-
-	m_iNextAnimationIndex = iNextIndex;
-	m_bNextLoop = bLoop;
-	m_fBlendDuration = max(0.f, fBlendTime);
-	m_fBlendAccTime = 0.0f;
-	m_bBlending = (m_fBlendDuration > 0.f);
-
-	m_Animations[m_iNextAnimationIndex]->Reset_TrackPosition();
-	m_bRootMotionInitialized = false;
-	m_vPrevRootMotions = _float3(0.f, 0.f, 0.f);
-	m_vRootMotionDeltaLocal = _float3(0.f, 0.f, 0.f);
-
-	if (!m_bBlending)
-	{
-		m_iCurrentAnimationIndex = iNextIndex;
-		m_bLoop = bLoop;
+		memcpy(&m_NodeLocalMatrices[i], &m_Nodes[i].fLocalMatrix, sizeof(_float4x4));
 	}
 
 	return S_OK;
@@ -247,6 +264,68 @@ HRESULT CModel::Consume_RootMotion()
 	_matrix StrippedLocal = XMMatrixAffineTransformation(vScale, XMVectorZero(), vRotation, vStrippedTranslation);
 	// 재조립된 행렬을 루트 노드에 다시 저장
 	XMStoreFloat4x4(&m_NodeLocalMatrices[m_iRootNodeIndex], StrippedLocal);
+
+	return S_OK;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 678~706행: Update_NodeCombinedMatrices
+HRESULT CModel::Update_NodeCombinedMatrices()
+{
+	if (m_NodeCombinedMatrices.size() != m_Nodes.size())
+		m_NodeCombinedMatrices.resize(m_Nodes.size());
+
+	for (size_t i = 0; i < m_Nodes.size(); i++)
+	{
+		_matrix Local = XMLoadFloat4x4(&m_NodeLocalMatrices[i]);
+		_matrix Combined = XMMatrixIdentity();
+
+		_int iParentIndex = m_Nodes[i].iParentIndex;
+
+		// 부모가 없으면 루트
+		if (iParentIndex == -1)
+		{
+			 // 루트는 m_PreTransformMatrix를 포함해서 combined 계산
+			Combined = XMLoadFloat4x4(&m_PreTransformMatrix) * Local;
+		}
+		else
+		{
+			// 자식은 내 local * 부모 combined
+			Combined = Local * XMLoadFloat4x4(&m_NodeCombinedMatrices[iParentIndex]);
+		}
+
+		XMStoreFloat4x4(&m_NodeCombinedMatrices[i], Combined);
+	}
+
+	return S_OK;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 709~733행: Update_FinalBoneMatrices
+HRESULT CModel::Update_FinalBoneMatrices()
+{
+	if (m_FinalBoneMatrices.size() != m_Bones.size())
+		m_FinalBoneMatrices.resize(m_Bones.size());
+
+	for (size_t i = 0; i < m_Bones.size(); i++)
+	{
+		const BONE_INFO& Bone = m_Bones[i];
+
+		if (Bone.iNodeIndex < 0 || Bone.iNodeIndex >= m_NodeCombinedMatrices.size())
+			return E_FAIL;
+
+		// 메시 정점을 bone 기준으로 바꾸는 행렬
+		_matrix Offset = XMLoadFloat4x4(reinterpret_cast<const _float4x4*>(Bone.fOffsetMatrix));
+
+		// 현재 애니메이션으로 움직인 뼈대
+		_matrix Combined = XMLoadFloat4x4(&m_NodeCombinedMatrices[Bone.iNodeIndex]);
+
+		// 셰이더가 실제 스키닝에 쓸 행렬
+		_matrix Final = Offset * Combined;
+		XMStoreFloat4x4(&m_FinalBoneMatrices[i], Final);
+	}
 
 	return S_OK;
 }

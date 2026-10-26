@@ -2,6 +2,15 @@
 // 원본: Client/Private/InGameCamera.cpp
 // [중략] include·클래스/자료형 선언·초기화 및 관련 보조 구현은 전체 프로젝트에 있습니다.
 // 아래 함수 본문은 원본 그대로이며, 이 파일만으로 빌드하거나 실행할 수 없습니다.
+// 읽는 흐름: 추적 대상·연출 요청 → Update/Late_Update → 모드별 갱신 → 클립 재생 종료 후 추적 복귀.
+
+// 원본 28~31행: Request_Follow
+void CInGameCamera::Request_Follow(CCharacter* pTarget)
+{
+	m_pFollowTarget = pTarget;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
 
 // 원본 19~26행: Request_Mode
 void CInGameCamera::Request_Mode(INGAME_CAMERA_MODE eMode)
@@ -53,6 +62,14 @@ void CInGameCamera::Request_Opening(CTransform* pActor)
 	m_fScriptDuration = m_pQuestClip->Get_Duration();
 
 	Request_Mode(INGAME_CAMERA_MODE::OPNEING);
+}
+
+// [중략] 원본의 다른 함수 및 선언.
+
+// 원본 119~122행: Update
+void CInGameCamera::Update(_float fTimeDelta)
+{
+	m_fModeTime += fTimeDelta;
 }
 
 // [중략] 원본의 다른 함수 및 선언.

@@ -2,6 +2,20 @@
 // 원본: Client/Private/Miyabi.cpp
 // [중략] include·클래스/자료형 선언·초기화 및 관련 보조 구현은 전체 프로젝트에 있습니다.
 // 아래 함수 본문은 원본 그대로이며, 이 파일만으로 빌드하거나 실행할 수 없습니다.
+// 읽는 흐름: 패링 입력 → 상태 요청 / 전투 매니저 충돌 결과 → 방어 성공·후속 상태·시간 배율 반영.
+
+// 원본 1868~1876행: Handle_ParryInput
+_bool CMiyabi::Handle_ParryInput()
+{
+    if (!m_InputContext.bParryPressed)
+        return false;
+
+    Start_ParryWarningBox();
+
+    return true;
+}
+
+// [중략] 원본의 다른 함수 및 선언.
 
 // 원본 2640~2705행: Start_Parry
 _bool CMiyabi::Start_Parry(CGameObject* pTarget, HIT_REACTION_TYPE eReactionType)
